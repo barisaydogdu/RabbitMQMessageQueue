@@ -8,7 +8,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func ReceiveMessage(ctx context.Context, ch *amqp.Channel, typ string, qName string) error {
+func ReceiveMessage(ctx context.Context, ch *amqp.Channel, typ string, qName string, rKey string) error {
 	if qName == "" {
 		return errors.New("qName is nil")
 	}
@@ -41,7 +41,7 @@ func ReceiveMessage(ctx context.Context, ch *amqp.Channel, typ string, qName str
 	log.Printf("Binding queue %s to exchange %s with routing key", q.Name, "logs_direct")
 	err = ch.QueueBind(
 		q.Name,            //Queue name
-		"",                //Routing key
+		rKey,              //Routing key
 		qName+"_exchange", //exchange
 		false,             //no-wait
 		nil)               //args)

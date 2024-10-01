@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,16 +15,17 @@ import (
 var (
 	typ   string
 	qType string
+	rKey  string
 	qName string
 	msg   string
 )
 
 func main() {
 	flag.StringVar(&typ, "typ", "", "Application running type")
-	flag.StringVar(&qType, "qType", "direct", "")
-	flag.StringVar(&qName, "qName", "emptyQueue", "")
-	flag.StringVar(&msg, "msg", "", "")
-
+	flag.StringVar(&qType, "qType", "", "")          //Qeueu Type
+	flag.StringVar(&qName, "qName", "", "")          //QName
+	flag.StringVar(&rKey, "rKey", "", "Routing Key") //Routing Key
+	flag.StringVar(&msg, "msg", "", "")              //Message
 	flag.Parse()
 
 	switch typ {
@@ -49,9 +51,17 @@ func main() {
 
 	switch typ {
 	case "consumer":
-		go messaging.ReceiveMessage(ctx, publisherChannel, qType, qName)
+
+		if qType == "" || qName == "" || rKey == "" {
+			log.Fatal("Queue type name and routing key cannot be empty")
+		}
+		go messaging.ReceiveMessage(ctx, publisherChannel, qType, qName, rKey)
 		break
 	case "publisher":
+		if qType == "" || qName == "" || rKey == "" || msg == "" {
+			log.Fatal("Queue type")
+		}
+		messaging.SendMessage(ctx, publisherChannel, qName, msg, rKey)
 		signal.Stop(ch)
 		cancel()
 		break
