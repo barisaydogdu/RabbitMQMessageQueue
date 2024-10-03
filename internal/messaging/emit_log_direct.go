@@ -8,12 +8,12 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func SendMessage(ctx context.Context, ch *amqp.Channel, qName string, message string, rKey string) error {
+func (m *Messaging) SendMessage(qName string, message string, rKey string) error {
 	//5 saniye içinde tamamlanmazsa iptal et
-	inctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	inctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
 	defer cancel()
 
-	err := ch.PublishWithContext(inctx,
+	err := m.rabbitMQ.Channel().PublishWithContext(inctx,
 		qName+"_exchange", //exchange
 		rKey,              // Routing Keys
 		false,             // mandatory -herhangi bir kuyruk bu routing key ile eşleşmiyorsa hata alıp almayacağını belirler. False olduğunda hata fırlatmaz

@@ -21,6 +21,7 @@ var (
 )
 
 func main() {
+
 	flag.StringVar(&typ, "typ", "", "Application running type")
 	flag.StringVar(&qType, "qType", "", "")          //Qeueu Type
 	flag.StringVar(&qName, "qName", "", "")          //QName
@@ -41,13 +42,16 @@ func main() {
 	signal.Notify(ch, os.Interrupt, syscall.SIGTERM)
 
 	url := "amqp://guest:guest@localhost:5672/"
-	conn, err := rabbitMQ.ConnectToRabbitMQ(url)
+	rabbitMQClient, err := rabbitMQ.ConnectToRabbitMQ(url)
 	rabbitMQ.FailOnError(err, "Failed to connect to RabbitMQ")
-	defer conn.Close()
+	defer rabbitMQClient.CloseConnection()
 
-	publisherChannel, err := rabbitMQ.OpenChannel(conn)
+	err = rabbitMQClient.OpenChannel()
 	rabbitMQ.FailOnError(err, "Failed to open a channel")
-	defer publisherChannel.Close()
+	defer rabbitMQClient.CloseChannel()
+
+	//Messaging struct
+	messagingClient := messaging.NewMessaging(ctx, *rabbitMQClient)
 
 	switch typ {
 	case "consumer":
@@ -55,13 +59,14 @@ func main() {
 		if qType == "" || qName == "" || rKey == "" {
 			log.Fatal("Queue type name and routing key cannot be empty")
 		}
-		go messaging.ReceiveMessage(ctx, publisherChannel, qType, qName, rKey)
+		go messagingClient.ReceiveMessage(qType, qName, rKey)
 		break
+
 	case "publisher":
-		if qType == "" || qName == "" || rKey == "" || msg == "" {
-			log.Fatal("Queue type")
+		if qName == "" || rKey == "" || msg == "" {
+			log.Fatal("Queue type,name, Routing key and message cannot be empty")
 		}
-		messaging.SendMessage(ctx, publisherChannel, qName, msg, rKey)
+		messagingClient.SendMessage(qName, msg, rKey)
 		signal.Stop(ch)
 		cancel()
 		break
@@ -70,8 +75,8 @@ func main() {
 	go func() {
 		select {
 		case <-ch:
-			_ = publisherChannel.Close()
-			_ = conn.Close()
+			_ = rabbitMQClient.CloseChannel()
+			rabbitMQClient.CloseConnection()
 			cancel()
 		}
 	}()
@@ -81,6 +86,6 @@ func main() {
 	select {
 	case <-ctx.Done():
 		//
-		println("applicatin shutting down...")
+		println(" application shutting down...")
 	}
 }

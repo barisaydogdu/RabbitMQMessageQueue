@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"log"
-
-	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func ReceiveMessage(ctx context.Context, ch *amqp.Channel, typ string, qName string, rKey string) error {
+// ctx context.Context
+func (m *Messaging) ReceiveMessage(typ string, qName string, rKey string) error {
+	ch := m.rabbitMQ.Channel()
+
 	if qName == "" {
 		return errors.New("qName is nil")
 	}
@@ -63,7 +64,7 @@ func ReceiveMessage(ctx context.Context, ch *amqp.Channel, typ string, qName str
 		return err
 	}
 
-	inctx, cancel := context.WithCancel(ctx)
+	inctx, cancel := context.WithCancel(m.ctx)
 	defer cancel()
 
 	go func() {
@@ -72,7 +73,7 @@ func ReceiveMessage(ctx context.Context, ch *amqp.Channel, typ string, qName str
 		}
 	}()
 
-	log.Printf("[*] Waiting for logs. To Exit press CTRL+C")
+	log.Printf("[*] Waiting for logs. To Exit press CTRL + C")
 	<-inctx.Done()
 
 	return nil
